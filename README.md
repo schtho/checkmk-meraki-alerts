@@ -46,3 +46,7 @@ To support your understanding of checkmk plugin programming, take a look at:
 - https://github.com/Yogibaer75/Check_MK-Things/blob/master/check%20plugins%202.0/meraki/agents/special/agent_meraki
 - https://github.com/Yogibaer75/Check_MK-Things/tree/master/check%20plugins%202.0/dell_idrac_redfish
 - https://exchange.checkmk.com/p/f5cloud
+
+## Releases MKP File
+
+Releases are available: https://github.com/schtho/checkmk-meraki/releases
