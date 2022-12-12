@@ -47,12 +47,12 @@ def check_meraki(item, params, section):
                         # Port is deactivated
                         continue
 
-                    if "warnings" in port_dict and len(port_dict["warnings"]) != 0:
+                    if "warnings" in port_dict and (len(port_dict["warnings"]) != 0):
                         for elem in port_dict["warnings"]:
                             err = f"[Port {port_dict['portId']}]: {elem}"
                             yield Result(state=State.WARN, summary=err)
 
-                    if "errors" in port_dict and len(port_dict["errors"]) != 0:
+                    if "errors" in port_dict and (len(port_dict["errors"]) != 0):
                         for elem in port_dict["errors"]:
                             err = f"[Port {port_dict['portId']}]: {elem}"
                             if elem == "Port disconnected":

@@ -55,7 +55,7 @@ def meraki(organization_id, network_id, api_key):
             details = base64_message
 
         sys.stdout.write("%s %s %s %s %s %s %s\n" % (
-            i["name"].replace(" ", ""),
+            str(i["name"]).replace(" ", ""),
             i["status"],
             i["productType"],
             i["model"],
