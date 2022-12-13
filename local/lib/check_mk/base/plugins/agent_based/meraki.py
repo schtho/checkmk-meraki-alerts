@@ -47,21 +47,23 @@ def check_meraki(item, params, section):
                         # Port is deactivated
                         continue
 
-                    if "warnings" in port_dict and (len(port_dict["warnings"]) != 0):
-                        for elem in port_dict["warnings"]:
-                            err = f"[Port {port_dict['portId']}]: {elem}"
-                            yield Result(state=State.WARN, summary=err)
+                    if "warnings" in port_dict:
+                        if len(port_dict["warnings"]) != 0:
+                            for elem in port_dict["warnings"]:
+                                err = f"[Port {port_dict['portId']}]: {elem}"
+                                yield Result(state=State.WARN, summary=err)
 
-                    if "errors" in port_dict and (len(port_dict["errors"]) != 0):
-                        for elem in port_dict["errors"]:
-                            err = f"[Port {port_dict['portId']}]: {elem}"
-                            if elem == "Port disconnected":
-                                if "cdp" in port_dict and "lldp" in port_dict:
-                                    err += f" (to {port_dict['lldp']['systemName'] if 'systemName' in port_dict['lldp'] else port_dict['cdp']['address']} {port_dict['cdp']['portId']})"
-                                    yield Result(state=State.CRIT, summary=err)
-                                continue
+                    if "errors" in port_dict:
+                        if len(port_dict["errors"]) != 0:
+                            for elem in port_dict["errors"]:
+                                err = f"[Port {port_dict['portId']}]: {elem}"
+                                if elem == "Port disconnected":
+                                    if "cdp" in port_dict and "lldp" in port_dict:
+                                        err += f" (to {port_dict['lldp']['systemName'] if 'systemName' in port_dict['lldp'] else port_dict['cdp']['address']} {port_dict['cdp']['portId']})"
+                                        yield Result(state=State.CRIT, summary=err)
+                                    continue
 
-                            yield Result(state=State.CRIT, summary=err)
+                                yield Result(state=State.CRIT, summary=err)
 
             return
 
