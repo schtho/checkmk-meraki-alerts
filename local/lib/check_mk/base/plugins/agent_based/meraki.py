@@ -15,12 +15,12 @@ import base64
 from .agent_based_api.v1 import *
 import json
 
+
 def discover_meraki(section):
     for name, _status, _producttype, _model, _serial, _ip, _details in section:
         yield Service(item=name)
 
 def check_meraki(item, params, section):
-#    print(params)
 
     for name, status, producttype, model, serial, ip, details in section:
 #        print(details)
@@ -66,6 +66,7 @@ def check_meraki(item, params, section):
                                 yield Result(state=State.CRIT, summary=err)
 
             return
+
 
 register.check_plugin(
     name = "meraki",

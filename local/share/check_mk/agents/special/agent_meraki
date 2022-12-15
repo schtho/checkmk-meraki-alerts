@@ -21,11 +21,10 @@ import getopt
 VERSION = '1.0'
 OPT_MERAKI_APIKEY = None
 OPT_MERAKI_ORG = None
-OPT_MERAKI_NETWORK = None
+OPT_MERAKI_TAGS = None
+OPT_MERAKI_TAG_TYPE = None
 
-def meraki(organization_id, network_id, api_key):
-
-    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/devices/statuses?networkIds[]={network_id}"
+def meraki(organization_id, api_key, network_tags, tag_filter_any):
 
     payload = None
 
@@ -35,34 +34,91 @@ def meraki(organization_id, network_id, api_key):
         "X-Cisco-Meraki-API-Key": api_key
     }
 
+    # Get all Meraki Networks (optional by tags)
+#    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks?tags[]=paedagogik&tags[]=verwaltung&tagsFilterType=withAnyTags"
+    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks"
+    if len(network_tags) != 0:
+        if tag_filter_any:
+            url += "?tagsFilterType=withAnyTags"
+        else:
+            url += "?tagsFilterType=withAllTags"
+        for t in network_tags:
+            url += f"&tags[]={t}"
+
+    response = requests.request('GET', url, headers=headers, data = payload)
+
+    if response.status_code == 429:
+        raise Exception("API rate limit exceeded")
+
+    meraki_net_list = response.json()
+
+    # for each given Meraki network
+    for meraki_net in meraki_net_list:
+        net_id = meraki_net["id"]
+        net_name = meraki_net["name"]
+
+        # Get all devices of given Meraki network
+        meraki_net_devices = None
+        for z in range(0,2):
+            try:
+                meraki_net_devices = get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id)
+                break
+            except Exception:
+                continue
+        if meraki_net_devices is None:
+            print(net_name + " error\n")
+            continue
+
+        # Piggyback CMK Host
+        cmk_host = f"<<<<Meraki-{net_name}>>>>\n"
+        sys.stdout.write(cmk_host)
+        # Service Beginning
+        sys.stdout.write('<<<meraki>>>\n')
+
+        for i in meraki_net_devices:
+            details = "null"
+            if "productType" in i and i["productType"] == "switch":
+                serial = i["serial"]
+                # retry 2 times if exception thrown
+                for z in range(0,2):
+                    try:
+                        details = get_meraki_sw_details_encoded(payload, headers, serial)
+                        break
+                    except Exception:
+                        continue
+
+            sys.stdout.write("%s %s %s %s %s %s %s\n" % (
+                str(i["name"]).replace(" ", ""),
+                i["status"],
+                i["productType"],
+                i["model"],
+                i["serial"],
+                (i["lanIp"] if "lanIp" in i else "None"),
+                details
+            ))
+#            break
+
+
+def get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id):
+    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/devices/statuses?networkIds[]={net_id}"
     response = requests.request('GET', url, headers=headers, data=payload)
-    json = response.json()
 
-    for i in json:
-        details = "null"
-        if "productType" in i and i["productType"] == "switch":
-            # lol
-            serial = i["serial"]
-            url = f"https://api.meraki.com/api/v1/devices/{serial}/switch/ports/statuses"
-            response = requests.request('GET', url, headers=headers, data = payload)
-            # json_sw_ports = response.json()
-            json_sw_ports = response.text
+    if response.status_code == 429:
+        raise Exception("API rate limit exceeded")
+    return response.json()
 
-            meraki_sw_dict_bytes = json_sw_ports.encode('ascii')
-            base64_bytes = base64.b64encode(meraki_sw_dict_bytes)
-            base64_message = base64_bytes.decode('ascii')
 
-            details = base64_message
+def get_meraki_sw_details_encoded(payload, headers, serial):
+    url = f"https://api.meraki.com/api/v1/devices/{serial}/switch/ports/statuses"
+    response = requests.request('GET', url, headers=headers, data = payload)
+    # json_sw_ports = response.json()
+    json_sw_ports = response.text
 
-        sys.stdout.write("%s %s %s %s %s %s %s\n" % (
-            str(i["name"]).replace(" ", ""),
-            i["status"],
-            i["productType"],
-            i["model"],
-            i["serial"],
-            (i["lanIp"] if "lanIp" in i else "None"),
-            details
-        ))
+    meraki_sw_dict_bytes = json_sw_ports.encode('ascii')
+    base64_bytes = base64.b64encode(meraki_sw_dict_bytes)
+    base64_message = base64_bytes.decode('ascii')
+    return base64_message
+
 
 def usage():
     sys.stderr.write("""Checkmk Cisco Meraki Agent
@@ -72,16 +128,18 @@ OPTIONS:
   -h, --help                                Show this help message and exit
   -o, --organization                        Organization ID inside Meraki Cloud
   -k, --key                                 Cloud API-Key
-  -n, --network                             Network ID inside Meraki Cloud
+  -t, --tags                                Meraki Network Tags Filter
+  -tt, --tagtype                            True if any of given --tags (filter), otherwise if all given tags
 """)
 
 def cli_args():
     opt_key = None
     opt_org = None
-    opt_net = None
+    opt_tags = None
+    opt_tag_type = None
 
-    short_options = "hk:o:n:"
-    long_options = ["help", "key=", "organization=", "network="]
+    short_options = "hk:o:t:tt:"
+    long_options = ["help", "key=", "organization=", "tags=", "tagtype="]
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], short_options, long_options)
@@ -97,8 +155,10 @@ def cli_args():
             opt_key = arg
         elif opt in ["-o", "--organization"]:
             opt_org = arg
-        elif opt in ["-n", "--network"]:
-            opt_net = arg
+        elif opt in ["-t", "--tags"]:
+            opt_tags = arg
+        elif opt in ["-tt", "--tagtype"]:
+            opt_tag_type = arg
         elif not opt:
             usage()
             sys.exit(0)
@@ -109,25 +169,24 @@ def cli_args():
     elif not opt_key:
         sys.stderr.write("ERROR: No key given.\n")
         sys.exit(1)
-    elif not opt_net:
-        sys.stderr.write("ERROR: No network defined.\n")
-        sys.exit(1)
 
-    return opt_org, opt_key, opt_net
+    return opt_org, opt_key, opt_tags, opt_tag_type
 
 
 # MAIN FUNCTION
 
-org, key, net = cli_args()
+org, key, tags, tag_type = cli_args()
 OPT_MERAKI_APIKEY = key
-OPT_MERAKI_NETWORK = net
 OPT_MERAKI_ORG = org
+OPT_MERAKI_TAGS = tags
+OPT_MERAKI_TAG_TYPE = tag_type
 
 sys.stdout.write('<<<check_mk>>>\n')
 sys.stdout.write('Version: %s\n' % VERSION)
 sys.stdout.write('AgentOS: meraki\n')
-sys.stdout.write('{"cmk/device_type": "network"\n')
 
-sys.stdout.write('<<<meraki>>>\n')
+sys.stdout.write('<<<labels>>>\n')
+sys.stdout.write('{"cmk/device":"meraki"}\n')
 
-meraki(OPT_MERAKI_ORG, OPT_MERAKI_NETWORK, OPT_MERAKI_APIKEY)
+tag_list = OPT_MERAKI_TAGS.split(",")
+meraki(OPT_MERAKI_ORG, OPT_MERAKI_APIKEY, tag_list, OPT_MERAKI_TAG_TYPE)

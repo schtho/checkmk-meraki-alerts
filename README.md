@@ -2,6 +2,10 @@
 
 This plugin provides a support for the monitoring of Meraki devices via the REST API.
 
+## Usage Information
+
+This Plugin works with Piggyback. You have to add additional Hosts in the form of `Meraki-{MERAKI_NET}`. For example, if you have the Meraki network `Home` the corresponding Host is called `Meraki-Home`. Checkmk piggybacks the data to that host.
+
 ## Documentation Agent
 
 That plugin is a special agent. The ruleset is comparable to vSphere or other CMK rulesets.

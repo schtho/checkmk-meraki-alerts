@@ -38,16 +38,30 @@ def _valuespec_special_agents_meraki():
         elements=[
             ('org_id', TextAscii(
                 title=_('Organization ID'),
-                allow_empty=True,
+                allow_empty=False,
             )),
             ('api_key', TextAscii(
                 title=_("API Key"),
-                allow_empty=True,
+                allow_empty=False,
             )),
-            ('network_id', TextAscii(
-                title=_("Network ID"),
-                allow_empty=True,
-            )),
+            ("filter_tags",
+                ListOfStrings(
+                    title=_("Filter by Tags (Optional)"),
+                    orientation="horizontal",
+                    help=_("Filter Meraki Networks by Tags "
+                           "Otherwise get all Meraki Networks "),
+                    allow_empty=True,
+                ),
+            ),
+            ("tags_filter_type",
+                DropdownChoice(
+                    title=_("Tags Filter Type"),
+                    choices=[
+                        (True, _("With Any Tags")),
+                        (False, _("With All Tags")),
+                    ],
+                    default_value=True
+                )),
 
         ],
         optional_keys=False,

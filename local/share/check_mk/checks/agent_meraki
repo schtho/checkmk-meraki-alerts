@@ -20,8 +20,10 @@ def agent_meraki_arguments(params, hostname, ipaddress):
         args += " -o " + quote_shell_string(params["org_id"])
     if params["api_key"] != "":
         args += " -k " + quote_shell_string(params["api_key"])
-    if params["network_id"] != "":
-        args += " -n " + quote_shell_string(params["network_id"])
+    if ("filter_tags" in params) and (len(params["filter_tags"]) != 0):
+        args += " -t " + quote_shell_string(','.join(params["filter_tags"]))
+    if ("tags_filter_type" in params) and (params["tags_filter_type"] != None):
+        args += " -tt " + quote_shell_string(str(params["tags_filter_type"]))
 
     args += " %s " % quote_shell_string(ipaddress)
     return args
