@@ -54,3 +54,10 @@ To support your understanding of checkmk plugin programming, take a look at:
 ## Releases MKP File
 
 Releases are available: https://github.com/schtho/checkmk-meraki/releases
+
+## Other Documentation
+
+- https://docs.checkmk.com/latest/de/labels.html#agent_plugins
+- https://git.onesystems.ch/Monitoring/check_mk/-/blob/be4bd9501c77e4c2fea066c2e65c6abbb872e8d6/cmk/gui/plugins/wato/datasource_programs.py
+- https://docs.checkmk.com/latest/de/piggyback.html?lquery=piggyback#_die_technik_dahinter
+- Command to debug on CLI: `cmk --debug -vII --plugins meraki --check Meraki-Dashboard`
