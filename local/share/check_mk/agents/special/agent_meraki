@@ -77,6 +77,7 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
 
         for i in meraki_net_devices:
             details = "null"
+            switch_tags = "null"
             if "productType" in i and i["productType"] == "switch":
                 serial = i["serial"]
                 # retry 2 times if exception thrown
@@ -86,17 +87,23 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
                         break
                     except Exception:
                         continue
+                
+                # switch tags
+                if "tags" in i and len(i["tags"]) != 0:
+                    switch_tags = ','.join(i["tags"])
 
-            sys.stdout.write("%s %s %s %s %s %s %s\n" % (
+            sys.stdout.write("%s %s %s %s %s %s %s %s\n" % (
                 str(i["name"]).replace(" ", ""),
                 i["status"],
                 i["productType"],
                 i["model"],
                 i["serial"],
                 (i["lanIp"] if "lanIp" in i else "None"),
-                details
+                details,
+                switch_tags
             ))
 #            break
+#        break
 
 
 def get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id):

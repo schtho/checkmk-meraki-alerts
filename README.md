@@ -45,6 +45,12 @@ Use as Monitoring Agent: `Configured API integrations, no Checkmk agent`
 
 Look at `Other integrations` for `Cisco Meraki via REST API` and configure the rules.
 
+## Usage Meraki
+The plugin supports tags on Meraki switches. You can add them to the switch via Meraki Dashboard and can set ports of the switch:
+- `cmk:PORTID:no-monitor`: Ignore errors and warnings on that port. For example: `cmk:12:no-monitor`: ignore errors on port 12.
+- `cmk:PORTID:no-cdp`: Do not use CDP/LLDP data to show to connected device if port is disconnected.
+- `cmk:PORTID:enforce`: Monitor offline state of a port.
+
 ## Other Plugins for Help
 To support your understanding of checkmk plugin programming, take a look at:
 - https://github.com/Yogibaer75/Check_MK-Things/blob/master/check%20plugins%202.0/meraki/agents/special/agent_meraki
@@ -61,3 +67,4 @@ Releases are available: https://github.com/schtho/checkmk-meraki/releases
 - https://git.onesystems.ch/Monitoring/check_mk/-/blob/be4bd9501c77e4c2fea066c2e65c6abbb872e8d6/cmk/gui/plugins/wato/datasource_programs.py
 - https://docs.checkmk.com/latest/de/piggyback.html?lquery=piggyback#_die_technik_dahinter
 - Command to debug on CLI: `cmk --debug -vII --plugins meraki --check Meraki-Dashboard`
+- Command to print the output of the raw data agent: `cmk -d Meraki-Dashboard`
