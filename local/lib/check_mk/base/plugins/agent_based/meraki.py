@@ -25,6 +25,15 @@ def check_meraki(item, params, section):
     for name, status, producttype, model, serial, ip, details, sw_device_tags in section:
 #        print(details)
         if item == name:
+
+            # Get tags of Meraki device
+            device_tags = convert_device_tags_string_to_list(sw_device_tags)
+
+            # check if device is exluded from monitoring
+            if "no-monitor" in device_tags:
+                yield Result(state=State.OK, summary= f"Device is not monitored!")
+                continue
+
             cmk_state = State.UNKNOWN
             if status == "offline":
                 yield Result(state=State.CRIT, summary= f"Device is offline!")
@@ -38,15 +47,14 @@ def check_meraki(item, params, section):
                 yield Result(state=State.OK, summary= f"[{model}][{ip}] Online")
 
             if producttype == "switch":
-                # convert base64 to dict with switch details
+                # convert base64 to dict
                 base64_bytes = details.encode('ascii')
                 sw_ports_str = base64.b64decode(base64_bytes)
 #                print(sw_ports_str)
                 sw_ports_dict = json.loads(sw_ports_str)
 
                 # get tags of switch with cmk:
-                ports_tags_dict = convert_sw_device_tags_to_dict(sw_device_tags)
-
+                ports_tags_dict = convert_sw_device_tags_to_ports_dict(sw_device_tags)
 
                 for port_dict in sw_ports_dict:
                     if "enabled" in port_dict and not port_dict["enabled"]:
@@ -57,6 +65,7 @@ def check_meraki(item, params, section):
                     tag_no_cdp = False
                     tag_enforce = False
                     tag_no_monitor = False
+#                    print(ports_tags_dict)
                     if port_dict['portId'] in ports_tags_dict:
                         lst = ports_tags_dict[port_dict['portId']]
                         if "no-cdp" in lst:
@@ -86,21 +95,30 @@ def check_meraki(item, params, section):
                                         yield Result(state=State.CRIT, summary=err)
                                     if tag_enforce is False:
                                         continue
-
                                 yield Result(state=State.CRIT, summary=err)
 
             return
 
 
-def convert_sw_device_tags_to_dict(sw_device_tags):
+def convert_device_tags_string_to_list(device_tags):
+    if not device_tags:
+        return []
+
+    tags = device_tags.split(",")
+    cmk_tags = [tag.removeprefix('cmk:') for tag in tags if tag.startswith('cmk:')]
+    return cmk_tags
+
+
+def convert_sw_device_tags_to_ports_dict(sw_device_tags):
     if not sw_device_tags:
         return {}
 
-    tags = sw_device_tags.split(",")
-    cmk_tags = [tag.removeprefix('cmk:') for tag in tags if tag.startswith('cmk:')]
+    cmk_tags = convert_device_tags_string_to_list(sw_device_tags)
     ports_tags_dict = {}
 
     for cmk_tag in cmk_tags:
+        if ":" not in cmk_tag:
+            continue
         tag_details = cmk_tag.split(":")
         port_no = tag_details[0]
         port_tag = tag_details[1]
