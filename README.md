@@ -50,6 +50,7 @@ The plugin supports tags on Meraki switches. You can add them to the switch via 
 - `cmk:PORTID:no-monitor`: Ignore errors and warnings on that port. For example: `cmk:12:no-monitor`: ignore errors on port 12.
 - `cmk:PORTID:no-cdp`: Do not use CDP/LLDP data to show to connected device if port is disconnected.
 - `cmk:PORTID:enforce`: Monitor offline state of a port.
+- `cmk:no-monitor`: Ignore device
 
 ## Other Plugins for Help
 To support your understanding of checkmk plugin programming, take a look at:
