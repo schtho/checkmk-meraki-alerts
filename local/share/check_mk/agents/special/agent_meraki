@@ -35,22 +35,7 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
     }
 
     # Get all Meraki Networks (optional by tags)
-#    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks?tags[]=paedagogik&tags[]=verwaltung&tagsFilterType=withAnyTags"
-    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks"
-    if len(network_tags) != 0:
-        if tag_filter_any:
-            url += "?tagsFilterType=withAnyTags"
-        else:
-            url += "?tagsFilterType=withAllTags"
-        for t in network_tags:
-            url += f"&tags[]={t}"
-
-    response = requests.request('GET', url, headers=headers, data = payload)
-
-    if response.status_code == 429:
-        raise Exception("API rate limit exceeded")
-
-    meraki_net_list = response.json()
+    meraki_net_list = get_meraki_networks(payload, headers, organization_id, network_tags, tag_filter_any)
 
     # for each given Meraki network
     for meraki_net in meraki_net_list:
@@ -69,6 +54,18 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
             print(net_name + " error\n")
             continue
 
+        # Get all link aggregations
+        meraki_net_link_aggr = None
+        for z in range(0,2):
+            try:
+                meraki_net_link_aggr = get_link_aggregations_by_serial_dict(payload, headers, net_id)
+                break
+            except Exception:
+                continue
+        if meraki_net_link_aggr is None:
+            print(net_name + " error\n")
+            continue
+
         # Piggyback CMK Host
         cmk_host = f"<<<<Meraki-{net_name}>>>>\n"
         sys.stdout.write(cmk_host)
@@ -78,23 +75,30 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
         for i in meraki_net_devices:
             details = "null"
             device_tags = "null"
-
-            # if device is switch get ports details
-            if "productType" in i and i["productType"] == "switch":
-                serial = i["serial"]
-                # retry 2 times if exception thrown
-                for z in range(0,2):
-                    try:
-                        details = get_meraki_sw_details_encoded(payload, headers, serial)
-                        break
-                    except Exception:
-                        continue
+            link_aggr = "null"
 
             # device tags
             if "tags" in i and len(i["tags"]) != 0:
                 device_tags = ','.join(i["tags"])
 
-            sys.stdout.write("%s %s %s %s %s %s %s %s\n" % (
+            if "cmk:no-monitor" not in i["tags"]:
+                # if device is switch
+                if "productType" in i and i["productType"] == "switch":
+                    serial = i["serial"]
+                    # get ports details
+                    # retry 2 times if exception thrown
+                    for z in range(0,2):
+                        try:
+                            details = get_meraki_sw_details_encoded(payload, headers, serial)
+                            break
+                        except Exception:
+                            continue
+
+                    # get link aggregated ports
+                    if serial in meraki_net_link_aggr:
+                        link_aggr = ",".join(meraki_net_link_aggr[serial])
+
+            sys.stdout.write("%s %s %s %s %s %s %s %s %s\n" % (
                 str(i["name"]).replace(" ", ""),
                 i["status"],
                 i["productType"],
@@ -102,10 +106,54 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
                 i["serial"],
                 (i["lanIp"] if "lanIp" in i else "None"),
                 details,
-                device_tags
+                device_tags,
+                link_aggr
             ))
 #            break
 #        break
+
+
+def get_link_aggregations_by_serial_dict(payload, headers, network_id):
+    url = f"https://api.meraki.com/api/v1/networks/{network_id}/switch/linkAggregations"
+    response = requests.request('GET', url, headers=headers, data=payload)
+
+    if response.status_code == 429:
+        raise Exception("API rate limit exceeded")
+    link_aggregations = response.json()
+
+    sw_port_aggregations_dict = {}  # key: serialno, value: ports with aggr
+
+    for aggr in link_aggregations:  # { "id": "link_xx", "switchPorts": [] }
+        if "switchPorts" in aggr:
+            for port in aggr["switchPorts"]:  # { "serial": "Q2FW-GHK7-PGK7", "portId": "25" }
+                serial = port["serial"]
+                if serial not in sw_port_aggregations_dict:
+                    sw_port_aggregations_dict[serial] = []
+                sw_port_aggregations_dict[serial].append(str(port["portId"]))
+
+    return sw_port_aggregations_dict
+
+
+def get_meraki_networks(payload, headers, organization_id, network_tags, tag_filter_any):
+    #    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks?tags[]=paedagogik&tags[]=verwaltung&tagsFilterType=withAnyTags"
+    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/networks"
+    if len(network_tags) != 0:
+        if tag_filter_any:
+            url += "?tagsFilterType=withAnyTags"
+        else:
+            url += "?tagsFilterType=withAllTags"
+        for t in network_tags:
+            url += f"&tags[]={t}"
+
+    response = requests.request('GET', url, headers=headers, data = payload)
+
+    if response.status_code == 429:
+        raise Exception("API rate limit exceeded")
+
+    meraki_net_list = response.json()
+
+    return meraki_net_list
+
 
 def get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id):
     url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/devices/statuses?networkIds[]={net_id}"

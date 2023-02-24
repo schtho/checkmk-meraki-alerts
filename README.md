@@ -48,7 +48,7 @@ Look at `Other integrations` for `Cisco Meraki via REST API` and configure the r
 ## Usage Meraki
 The plugin supports tags on Meraki switches. You can add them to the switch via Meraki Dashboard and can set ports of the switch:
 - `cmk:PORTID:no-monitor`: Ignore errors and warnings on that port. For example: `cmk:12:no-monitor`: ignore errors on port 12.
-- `cmk:PORTID:no-cdp`: Do not use CDP/LLDP data to show to connected device if port is disconnected.
+- `cmk:PORTID:cdp`: Use CDP/LLDP data showing the connected device if port is disconnected.
 - `cmk:PORTID:enforce`: Monitor offline state of a port.
 - `cmk:no-monitor`: Ignore device
 

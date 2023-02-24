@@ -17,12 +17,12 @@ import json
 
 
 def discover_meraki(section):
-    for name, _status, _producttype, _model, _serial, _ip, _details, _sw_device_tags in section:
+    for name, _status, _producttype, _model, _serial, _ip, _details, _sw_device_tags, _sw_link_aggr in section:
         yield Service(item=name)
 
 def check_meraki(item, params, section):
 
-    for name, status, producttype, model, serial, ip, details, sw_device_tags in section:
+    for name, status, producttype, model, serial, ip, details, sw_device_tags, sw_link_aggr_text in section:
 #        print(details)
         if item == name:
 
@@ -46,6 +46,11 @@ def check_meraki(item, params, section):
             if status == "online":
                 yield Result(state=State.OK, summary= f"[{model}][{ip}] Online")
 
+            if producttype == "wireless":
+                # if access point is in repeater mode, alerting
+                if ip == "None":
+                    yield Result(state=State.WARN, summary= f"Device is in repeater mode!")
+
             if producttype == "switch":
                 # convert base64 to dict
                 base64_bytes = details.encode('ascii')
@@ -56,20 +61,26 @@ def check_meraki(item, params, section):
                 # get tags of switch with cmk:
                 ports_tags_dict = convert_sw_device_tags_to_ports_dict(sw_device_tags)
 
+                # get list of aggregated ports of that switch
+                if sw_link_aggr_text != "null":
+                    sw_link_aggr_ports_list = sw_link_aggr_text.split(",")
+                else:
+                    sw_link_aggr_ports_list = []
+
                 for port_dict in sw_ports_dict:
                     if "enabled" in port_dict and not port_dict["enabled"]:
                         # Port is deactivated
                         continue
 
                     # get tags of port
-                    tag_no_cdp = False
+                    tag_cdp = False
                     tag_enforce = False
                     tag_no_monitor = False
-#                    print(ports_tags_dict)
+                    print(ports_tags_dict)
                     if port_dict['portId'] in ports_tags_dict:
                         lst = ports_tags_dict[port_dict['portId']]
-                        if "no-cdp" in lst:
-                            tag_no_cdp = True
+                        if "cdp" in lst:
+                            tag_cdp = True
                         if "enforce" in lst:
                             tag_enforce = True
                         if "no-monitor" in lst:
@@ -79,18 +90,25 @@ def check_meraki(item, params, section):
                     if tag_no_monitor:
                         continue
 
+                    # check if one link of aggregated link is down
+                    if port_dict['portId'] in sw_link_aggr_ports_list and "status" in port_dict and port_dict["status"] == "Disconnected":
+                        err = f"[Port {port_dict['portId']}]: AGGR Link down!"
+                        yield Result(state=State.CRIT, summary=err)
+
+                    # if port has warnings
                     if "warnings" in port_dict:
                         if len(port_dict["warnings"]) != 0:
                             for elem in port_dict["warnings"]:
                                 err = f"[Port {port_dict['portId']}]: {elem}"
                                 yield Result(state=State.WARN, summary=err)
 
+                    # if port has errors
                     if "errors" in port_dict:
                         if len(port_dict["errors"]) != 0:
                             for elem in port_dict["errors"]:
                                 err = f"[Port {port_dict['portId']}]: {elem}"
                                 if elem == "Port disconnected":
-                                    if tag_no_cdp is False and "cdp" in port_dict and "lldp" in port_dict:
+                                    if tag_cdp is True and "cdp" in port_dict and "lldp" in port_dict:
                                         err += f" (to {port_dict['lldp']['systemName'] if 'systemName' in port_dict['lldp'] else port_dict['cdp']['address']} {port_dict['cdp']['portId']})"
                                         yield Result(state=State.CRIT, summary=err)
                                     if tag_enforce is False:
@@ -126,7 +144,7 @@ def convert_sw_device_tags_to_ports_dict(sw_device_tags):
         if port_no not in ports_tags_dict:
             ports_tags_dict[port_no] = []
         ports_tags_dict[port_no].append(port_tag)
-    
+
     return ports_tags_dict
 
 
