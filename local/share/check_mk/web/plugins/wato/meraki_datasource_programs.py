@@ -19,16 +19,13 @@ from cmk.gui.valuespec import (
     Dictionary,
     TextAscii,
     Password,
+    Dictionary,
+    DropdownChoice,
 )
 
 from cmk.gui.plugins.wato import (
     HostRulespec,
     rulespec_registry,
-)
-
-from cmk.gui.valuespec import (
-    Dictionary,
-    DropdownChoice,
 )
 
 from cmk.gui.plugins.wato.datasource_programs import RulespecGroupDatasourceProgramsHardware
