@@ -26,6 +26,11 @@ from cmk.gui.plugins.wato import (
     rulespec_registry,
 )
 
+from cmk.gui.valuespec import (
+    Dictionary,
+    DropdownChoice,
+)
+
 from cmk.gui.plugins.wato.datasource_programs import RulespecGroupDatasourceProgramsHardware
 
 
