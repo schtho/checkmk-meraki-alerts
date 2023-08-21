@@ -21,6 +21,7 @@ from cmk.gui.valuespec import (
     Password,
     Dictionary,
     DropdownChoice,
+    ListOfStrings,
 )
 
 from cmk.gui.plugins.wato import (

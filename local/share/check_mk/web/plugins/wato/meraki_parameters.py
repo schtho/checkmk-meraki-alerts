@@ -19,12 +19,14 @@ from cmk.gui.valuespec import (
     Dictionary,
     TextAscii,
     Password,
+    MonitoringState,
+    Percentage
 )
 
 from cmk.gui.plugins.wato import (
     CheckParameterRulespecWithItem,
     rulespec_registry,
-    RulespecGroupCheckParametersOperatingSystem,
+    RulespecGroupCheckParametersNetworking,
 )
 
 def _item_valuespec_foobar():
