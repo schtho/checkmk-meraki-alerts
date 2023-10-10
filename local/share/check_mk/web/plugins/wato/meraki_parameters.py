@@ -20,7 +20,10 @@ from cmk.gui.valuespec import (
     TextAscii,
     Password,
     MonitoringState,
-    Percentage
+    Percentage,
+    Tuple,
+    Integer,
+    Float
 )
 
 from cmk.gui.plugins.wato import (
