@@ -15,17 +15,37 @@
 # Boston, MA 02110-1301 USA.
 
 def agent_meraki_arguments(params, hostname, ipaddress):
-    args = ""
+    args = []
     if params["org_id"] != "":
-        args += " -o " + quote_shell_string(params["org_id"])
+        args.extend(
+            [
+                "-o",
+                params["org_id"]
+            ]
+        )
     if params["api_key"] != "":
-        args += " -k " + quote_shell_string(params["api_key"])
+        args.extend(
+            [
+                "-k",
+                params["api_key"]
+            ]
+        )
     if ("filter_tags" in params) and (len(params["filter_tags"]) != 0):
-        args += " -t " + quote_shell_string(','.join(params["filter_tags"]))
+        args.extend(
+            [
+                "-t",
+                ','.join(params["filter_tags"])
+            ]
+        )
     if ("tags_filter_type" in params) and (params["tags_filter_type"] != None):
-        args += " -tt " + quote_shell_string(str(params["tags_filter_type"]))
+        args.extend(
+            [
+                "-tt",
+                str(params["tags_filter_type"])
+            ]
+        )
 
-    args += " %s " % quote_shell_string(ipaddress)
+    args.extend(["%s" % ipaddress])
     return args
 
 
