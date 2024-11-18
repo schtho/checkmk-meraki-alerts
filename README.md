@@ -14,28 +14,28 @@ The plugin provides several files:
 
 First, define the special agent ruleset with the necessary parameters in wato. In addition to that, each CMK service can also follow specific rules of rule sets. For that, we also define a rule set for our meraki services:
 ```bash
-OMD[site]:~$ nano ~/local/share/check_mk/web/plugins/wato/meraki_datasource_programs.py
+OMD[site]:~$ nano ~/local/share/check_mk/web/plugins/wato/meraki_alerts_datasource_programs.py
 
 # WATO Settings for Service
-OMD[site]:~$ nano ~/local/share/check_mk/web/plugins/wato/meraki_parameters.py
+OMD[site]:~$ nano ~/local/share/check_mk/web/plugins/wato/meraki_alerts_parameters.py
 ```
 
 Checkmk takes these parameters of wato and uses them to call the special agent. The parameters how to call the executable agent is defined in this file:
 
 ```bash
-OMD[site]:~$ nano ~/local/share/check_mk/checks/agent_meraki
+OMD[site]:~$ nano ~/local/share/check_mk/checks/agent_meraki_alerts
 ```
 
 Checkmk calls the following script with the previously defined parameters for the "executable". That agent produces raw data which is analyzed in a latter step:
 
 ```bash
-OMD[site]:~$ nano ~/local/share/check_mk/agents/special/agent_meraki
+OMD[site]:~$ nano ~/local/share/check_mk/agents/special/agent_meraki_alerts
 ```
 
 At the end, Checkmk analyzes and monitors the given services by the rules defined in this file:
 
 ```bash
-OMD[site]:~$ nano ~/local/lib/check_mk/base/plugins/agent_based/meraki.py
+OMD[site]:~$ nano ~/local/lib/check_mk/base/plugins/agent_based/meraki_alerts.py
 ```
 
 ## Documentation Usage

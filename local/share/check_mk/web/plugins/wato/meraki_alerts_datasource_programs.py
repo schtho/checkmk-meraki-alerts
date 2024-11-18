@@ -74,6 +74,6 @@ def _valuespec_special_agents_meraki():
 rulespec_registry.register(
     HostRulespec(
         group=RulespecGroupDatasourceProgramsHardware,
-        name="special_agents:meraki",
+        name="special_agents:meraki_alerts",
         valuespec=_valuespec_special_agents_meraki,
     ))

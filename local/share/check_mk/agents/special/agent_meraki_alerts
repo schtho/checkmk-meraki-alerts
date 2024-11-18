@@ -15,7 +15,6 @@
 
 import sys
 import requests
-import base64
 import getopt
 
 VERSION = '1.0'
@@ -37,101 +36,48 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
     # Get all Meraki Networks (optional by tags)
     meraki_net_list = get_meraki_networks(payload, headers, organization_id, network_tags, tag_filter_any)
 
+    # Get all alerts provided by Meraki Cloud
+    meraki_org_assurance_alerts_by_network_id = get_meraki_org_assurance_alerts_by_network_id(payload, headers, organization_id)
+
     # for each given Meraki network
     for meraki_net in meraki_net_list:
         net_id = meraki_net["id"]
         net_name = meraki_net["name"]
 
-        # Get all devices of given Meraki network
-        meraki_net_devices = None
-        for z in range(0,2):
-            try:
-                meraki_net_devices = get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id)
-                break
-            except Exception:
-                continue
-        if meraki_net_devices is None:
-            print(net_name + " error\n")
-            continue
-
-        # Get all link aggregations
-        meraki_net_link_aggr = None
-        for z in range(0,2):
-            try:
-                meraki_net_link_aggr = get_link_aggregations_by_serial_dict(payload, headers, net_id)
-                break
-            except Exception:
-                continue
-        if meraki_net_link_aggr is None:
-            print(net_name + " error\n")
-            continue
+        # Get all alerts of given Meraki network
+        all_alerts_of_network_list = meraki_org_assurance_alerts_by_network_id[
+            net_id] if net_id in meraki_org_assurance_alerts_by_network_id else []
 
         # Piggyback CMK Host
         cmk_host = f"<<<<Meraki-{net_name}>>>>\n"
         sys.stdout.write(cmk_host)
         # Service Beginning
-        sys.stdout.write('<<<meraki>>>\n')
+        sys.stdout.write('<<<meraki_alerts:sep(59)>>>\n')
 
-        for i in meraki_net_devices:
-            details = "null"
-            device_tags = "null"
-            link_aggr = "null"
+        for alert in all_alerts_of_network_list:
 
-            # device tags
-            if "tags" in i and len(i["tags"]) != 0:
-                device_tags = ','.join(i["tags"])
+            alert_category_type = alert["categoryType"] if "categoryType" in alert else "None"
+            alert_device_type = alert["deviceType"] if "deviceType" in alert else "None"
+            alert_type = alert["type"] if "type" in alert else "None"
+            alert_title = alert["title"] if "title" in alert else "None"
+            alert_severity = alert["severity"] if "severity" in alert else "None"
 
-            if "cmk:no-monitor" not in i["tags"]:
-                # if device is switch
-                if "productType" in i and i["productType"] == "switch":
-                    serial = i["serial"]
-                    # get ports details
-                    # retry 2 times if exception thrown
-                    for z in range(0,2):
-                        try:
-                            details = get_meraki_sw_details_encoded(payload, headers, serial)
-                            break
-                        except Exception:
-                            continue
+            alert_devices = ""
+            if "scope" in alert:
+                if "devices" in alert["scope"]:
+                    for device in alert["scope"]["devices"]:
+                        alert_devices += f"{device},"
+            if alert_devices == "":
+                alert_devices = "None"
 
-                    # get link aggregated ports
-                    if serial in meraki_net_link_aggr:
-                        link_aggr = ",".join(meraki_net_link_aggr[serial])
-
-            sys.stdout.write("%s %s %s %s %s %s %s %s %s\n" % (
-                str(i["name"]).replace(" ", ""),
-                i["status"],
-                i["productType"],
-                i["model"],
-                i["serial"],
-                (i["lanIp"] if "lanIp" in i else "None"),
-                details,
-                device_tags,
-                link_aggr
+            sys.stdout.write("%s;%s;%s;%s;%s;%s\n" % (
+                alert_category_type,
+                alert_device_type,
+                alert_type,
+                alert_title,
+                alert_severity,
+                alert_devices
             ))
-#            break
-#        break
-
-
-def get_link_aggregations_by_serial_dict(payload, headers, network_id):
-    url = f"https://api.meraki.com/api/v1/networks/{network_id}/switch/linkAggregations"
-    response = requests.request('GET', url, headers=headers, data=payload)
-
-    if response.status_code == 429:
-        raise Exception("API rate limit exceeded")
-    link_aggregations = response.json()
-
-    sw_port_aggregations_dict = {}  # key: serialno, value: ports with aggr
-
-    for aggr in link_aggregations:  # { "id": "link_xx", "switchPorts": [] }
-        if "switchPorts" in aggr:
-            for port in aggr["switchPorts"]:  # { "serial": "Q2FW-GHK7-PGK7", "portId": "25" }
-                serial = port["serial"]
-                if serial not in sw_port_aggregations_dict:
-                    sw_port_aggregations_dict[serial] = []
-                sw_port_aggregations_dict[serial].append(str(port["portId"]))
-
-    return sw_port_aggregations_dict
 
 
 def get_meraki_networks(payload, headers, organization_id, network_tags, tag_filter_any):
@@ -155,31 +101,30 @@ def get_meraki_networks(payload, headers, organization_id, network_tags, tag_fil
     return meraki_net_list
 
 
-def get_meraki_devices_by_net_dict(payload, headers, organization_id, net_id):
-    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/devices/statuses?networkIds[]={net_id}"
+def get_meraki_org_assurance_alerts_by_network_id(payload, headers, organization_id):
+    url = f"https://api.meraki.com/api/v1/organizations/{organization_id}/assurance/alerts/"
     response = requests.request('GET', url, headers=headers, data=payload)
+    json_org_alerts = response.json()
 
-    if response.status_code == 429:
-        raise Exception("API rate limit exceeded")
-    return response.json()
+    alerts_by_network_id_dict = {}
+    alerts_by_network_id_dict.setdefault(key, [])
 
+    for alert in json_org_alerts:
+        if "network" in alert:
+            net_id = alert["network"].id
+            net_name = alert["network"].name
 
-def get_meraki_sw_details_encoded(payload, headers, serial):
-    url = f"https://api.meraki.com/api/v1/devices/{serial}/switch/ports/statuses"
-    response = requests.request('GET', url, headers=headers, data = payload)
-    # json_sw_ports = response.json()
-    json_sw_ports = response.text
+            alerts_by_network_id_dict[net_id].append(alert)
+        else:
+            continue
 
-    meraki_sw_dict_bytes = json_sw_ports.encode('ascii')
-    base64_bytes = base64.b64encode(meraki_sw_dict_bytes)
-    base64_message = base64_bytes.decode('ascii')
-    return base64_message
+    return alerts_by_network_id_dict
 
 
 def usage():
-    sys.stderr.write("""Checkmk Cisco Meraki Agent
-USAGE: agent_meraki -o ORGANIZATION-ID -k API-KEY -n NETWORK-ID
-       agent_meraki -h
+    sys.stderr.write("""Checkmk Cisco Meraki Alerts Agent
+USAGE: agent_meraki_alerts -o ORGANIZATION-ID -k API-KEY -n NETWORK-ID
+       agent_meraki_alerts -h
 OPTIONS:
   -h, --help                                Show this help message and exit
   -o, --organization                        Organization ID inside Meraki Cloud
@@ -239,7 +184,7 @@ OPT_MERAKI_TAG_TYPE = tag_type
 
 sys.stdout.write('<<<check_mk>>>\n')
 sys.stdout.write('Version: %s\n' % VERSION)
-sys.stdout.write('AgentOS: meraki\n')
+sys.stdout.write('AgentOS: meraki_alerts\n')
 
 sys.stdout.write('<<<labels>>>\n')
 sys.stdout.write('{"cmk/device":"meraki"}\n')

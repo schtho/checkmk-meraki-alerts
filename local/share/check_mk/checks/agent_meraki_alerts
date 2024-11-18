@@ -49,4 +49,4 @@ def agent_meraki_arguments(params, hostname, ipaddress):
     return args
 
 
-special_agent_info["meraki"] = agent_meraki_arguments
+special_agent_info["meraki_alerts"] = agent_meraki_arguments

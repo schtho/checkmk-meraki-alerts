@@ -53,10 +53,10 @@ def _parameter_valuespec_foobar():
 
 rulespec_registry.register(
     CheckParameterRulespecWithItem(
-        check_group_name="meraki_ruleset",
+        check_group_name="meraki_alerts_ruleset",
         group=RulespecGroupCheckParametersNetworking,
         match_type="dict",
         item_spec=_item_valuespec_foobar,
         parameter_valuespec=_parameter_valuespec_foobar,
-        title=lambda: _("Cisco Meraki via API Settings"),
+        title=lambda: _("Cisco Meraki Alerts via API Settings"),
     ))
