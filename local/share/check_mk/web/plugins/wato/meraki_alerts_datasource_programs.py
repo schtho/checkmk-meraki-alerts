@@ -34,7 +34,7 @@ from cmk.gui.plugins.wato.datasource_programs import RulespecGroupDatasourceProg
 
 def _valuespec_special_agents_meraki():
     return Dictionary(
-        title=_("Cisco Meraki via REST API"),
+        title=_("Cisco Meraki Alerts via REST API"),
         help=_(
             "This rule selects the Cisco Meraki REST API to collect data "
             "instead of the slow SNMP"),

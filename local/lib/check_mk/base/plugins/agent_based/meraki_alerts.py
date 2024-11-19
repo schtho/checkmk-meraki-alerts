@@ -15,14 +15,14 @@ from .agent_based_api.v1 import *
 
 
 def discover_meraki(section):
-    for _alert_categoryType, _alert_deviceType, _alert_type, _alert_title, _alert_severity, _alert_scope in section:
-        yield Service()
+    yield Service()
 
-def check_meraki(item, params, section):
+
+def check_meraki(params, section):
 
     for alert_categoryType, alert_deviceType, alert_type, alert_title, alert_severity, alert_scope in section:
 
-        err_text = f"[{alert_scope}][{alert_type}]: {alert_title}"
+        err_text = f"[{alert_scope}]: {alert_title}"
         if alert_severity == "warning":
             yield Result(state=State.WARN, summary=err_text)
         elif alert_severity == "critical":
@@ -30,10 +30,12 @@ def check_meraki(item, params, section):
         else:
             yield Result(state=State.OK, summary="OK")
 
+    if len(section) == 0:
+        yield Result(state=State.OK, summary="OK")
 
 register.check_plugin(
     name = "meraki_alerts",
-    service_name = "Meraki Alert %s",
+    service_name = "Meraki Alerts",
     sections=["meraki_alerts"],
     discovery_function = discover_meraki,
     check_function = check_meraki,

@@ -65,8 +65,10 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
             alert_devices = ""
             if "scope" in alert:
                 if "devices" in alert["scope"]:
+                    lst = []
                     for device in alert["scope"]["devices"]:
-                        alert_devices += f"{device},"
+                        lst.append(str(device['name']))
+                    alert_devices = ",".join(lst)
             if alert_devices == "":
                 alert_devices = "None"
 
@@ -107,14 +109,16 @@ def get_meraki_org_assurance_alerts_by_network_id(payload, headers, organization
     json_org_alerts = response.json()
 
     alerts_by_network_id_dict = {}
-    alerts_by_network_id_dict.setdefault(key, [])
 
     for alert in json_org_alerts:
         if "network" in alert:
-            net_id = alert["network"].id
-            net_name = alert["network"].name
+            net_id = alert["network"]["id"]
+            net_name = alert["network"]["name"]
 
-            alerts_by_network_id_dict[net_id].append(alert)
+            try:
+                alerts_by_network_id_dict[net_id].append(alert)
+            except KeyError:
+                alerts_by_network_id_dict[net_id] = [alert]
         else:
             continue
 
