@@ -14,31 +14,37 @@
 from .agent_based_api.v1 import *
 
 
-def discover_meraki(section):
+def discover_meraki_alerts(section):
     yield Service()
 
 
-def check_meraki(params, section):
+def check_meraki_alerts(params, section):
 
     for alert_categoryType, alert_deviceType, alert_type, alert_title, alert_severity, alert_scope in section:
 
+        if "exclude_alert_types" in params and alert_type in params["exclude_alert_types"]:
+            yield Result(state=State.OK, summary=f"{alert_type} ignored")
+            continue
+
         err_text = f"[{alert_scope}]: {alert_title}"
+        err_details = f"[{alert_scope}]: {alert_title} [{alert_type}][{alert_categoryType}]"
         if alert_severity == "warning":
-            yield Result(state=State.WARN, summary=err_text)
+            yield Result(state=State.WARN, summary=err_text, details=err_details)
         elif alert_severity == "critical":
-            yield Result(state=State.CRIT, summary=err_text)
+            yield Result(state=State.CRIT, summary=err_text, details=err_details)
         else:
-            yield Result(state=State.OK, summary="OK")
+            yield Result(state=State.OK, summary="OK", details=err_details)
 
     if len(section) == 0:
         yield Result(state=State.OK, summary="OK")
+
 
 register.check_plugin(
     name = "meraki_alerts",
     service_name = "Meraki Alerts",
     sections=["meraki_alerts"],
-    discovery_function = discover_meraki,
-    check_function = check_meraki,
-    check_default_parameters={"error_rate": (0.010, 0.100), "port_aggr_state": 1}, # not implemented yet
+    discovery_function = discover_meraki_alerts,
+    check_function = check_meraki_alerts,
+    check_default_parameters={}, # not implemented yet
     check_ruleset_name="meraki_alerts_ruleset",
 )

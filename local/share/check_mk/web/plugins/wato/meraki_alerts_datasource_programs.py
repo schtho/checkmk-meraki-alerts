@@ -22,6 +22,7 @@ from cmk.gui.valuespec import (
     Dictionary,
     DropdownChoice,
     ListOfStrings,
+    DualListChoice,
 )
 
 from cmk.gui.plugins.wato import (
@@ -43,7 +44,7 @@ def _valuespec_special_agents_meraki():
                 title=_('Organization ID'),
                 allow_empty=False,
             )),
-            ('api_key', TextAscii(
+            ('api_key', Password(
                 title=_("API Key"),
                 allow_empty=False,
             )),
@@ -65,7 +66,23 @@ def _valuespec_special_agents_meraki():
                     ],
                     default_value=True
                 )),
-
+#            ("exclude_alert_types",
+#                DualListChoice(
+#                    title=_("Tags Filter Type"),
+#                    choices=[
+#                        (True, _("With Any Tags")),
+#                        (False, _("With All Tags")),
+#                    ]
+#                )),
+            ("exclude_alert_types",
+                ListOfStrings(
+                    title=_("Exclude Alert Types (Optional)"),
+                    orientation="vertical",
+                    help=_("Exclude specific types of alerts. Get these types by checking the services in brackets "
+                           "Otherwise get all Meraki Networks "),
+                    allow_empty=True,
+                ),
+            ),
         ],
         optional_keys=False,
     )
