@@ -40,8 +40,15 @@ def agent_meraki_arguments(params, hostname, ipaddress):
     if ("tags_filter_type" in params) and (params["tags_filter_type"] != None):
         args.extend(
             [
-                "-tt",
+                "-T",
                 str(params["tags_filter_type"])
+            ]
+        )
+    if ("exclude_alert_types" in params) and (len(params["exclude_alert_types"]) != 0):
+        args.extend(
+            [
+                "-a",
+                ','.join(params["exclude_alert_types"])
             ]
         )
 

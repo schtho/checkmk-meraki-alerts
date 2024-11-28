@@ -22,10 +22,6 @@ def check_meraki_alerts(params, section):
 
     for alert_categoryType, alert_deviceType, alert_type, alert_title, alert_severity, alert_scope in section:
 
-        if "exclude_alert_types" in params and alert_type in params["exclude_alert_types"]:
-            yield Result(state=State.OK, summary=f"{alert_type} ignored")
-            continue
-
         err_text = f"[{alert_scope}]: {alert_title}"
         err_details = f"[{alert_scope}]: {alert_title} [{alert_type}][{alert_categoryType}]"
         if alert_severity == "warning":

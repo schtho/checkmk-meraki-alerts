@@ -22,8 +22,9 @@ OPT_MERAKI_APIKEY = None
 OPT_MERAKI_ORG = None
 OPT_MERAKI_TAGS = None
 OPT_MERAKI_TAG_TYPE = None
+OPT_MERAKI_EXCLUDED_ALERT_TYPES = None
 
-def meraki(organization_id, api_key, network_tags, tag_filter_any):
+def meraki(organization_id, api_key, network_tags, tag_filter_any, excluded_alert_types_list):
 
     payload = None
 
@@ -61,6 +62,9 @@ def meraki(organization_id, api_key, network_tags, tag_filter_any):
             alert_type = alert["type"] if "type" in alert else "None"
             alert_title = alert["title"] if "title" in alert else "None"
             alert_severity = alert["severity"] if "severity" in alert else "None"
+
+            if alert_type in excluded_alert_types_list:
+                continue
 
             alert_devices = ""
             if "scope" in alert:
@@ -135,6 +139,7 @@ OPTIONS:
   -k, --key                                 Cloud API-Key
   -t, --tags                                Meraki Network Tags Filter
   -tt, --tagtype                            True if any of given --tags (filter), otherwise if all given tags
+  -et, --excludedalerttypes                 Exclude specific Alert Types
 """)
 
 def cli_args():
@@ -142,9 +147,10 @@ def cli_args():
     opt_org = None
     opt_tags = None
     opt_tag_type = None
+    opt_excluded_alert_types = None
 
-    short_options = "hk:o:t:tt:"
-    long_options = ["help", "key=", "organization=", "tags=", "tagtype="]
+    short_options = "h:k:o:t:T:a:"
+    long_options = ["help", "key=", "organization=", "tags=", "tagtype=", "excludedalerttypes="]
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], short_options, long_options)
@@ -162,8 +168,10 @@ def cli_args():
             opt_org = arg
         elif opt in ["-t", "--tags"]:
             opt_tags = arg
-        elif opt in ["-tt", "--tagtype"]:
+        elif opt in ["-T", "--tagtype"]:
             opt_tag_type = arg
+        elif opt in ["-a", "--excludedalerttypes"]:
+            opt_excluded_alert_types = arg
         elif not opt:
             usage()
             sys.exit(0)
@@ -175,16 +183,16 @@ def cli_args():
         sys.stderr.write("ERROR: No key given.\n")
         sys.exit(1)
 
-    return opt_org, opt_key, opt_tags, opt_tag_type
+    return opt_org, opt_key, opt_tags, opt_tag_type, opt_excluded_alert_types
 
 
 # MAIN FUNCTION
-
-org, key, tags, tag_type = cli_args()
+org, key, tags, tag_type, excluded_alert_types = cli_args()
 OPT_MERAKI_APIKEY = key
 OPT_MERAKI_ORG = org
 OPT_MERAKI_TAGS = tags
 OPT_MERAKI_TAG_TYPE = tag_type
+OPT_MERAKI_EXCLUDED_ALERT_TYPES = excluded_alert_types
 
 sys.stdout.write('<<<check_mk>>>\n')
 sys.stdout.write('Version: %s\n' % VERSION)
@@ -193,5 +201,10 @@ sys.stdout.write('AgentOS: meraki_alerts\n')
 sys.stdout.write('<<<labels>>>\n')
 sys.stdout.write('{"cmk/device":"meraki"}\n')
 
+tag_list = []
 tag_list = OPT_MERAKI_TAGS.split(",")
-meraki(OPT_MERAKI_ORG, OPT_MERAKI_APIKEY, tag_list, OPT_MERAKI_TAG_TYPE)
+
+excluded_alert_types_list = []
+excluded_alert_types_list = OPT_MERAKI_EXCLUDED_ALERT_TYPES.split(",")
+
+meraki(OPT_MERAKI_ORG, OPT_MERAKI_APIKEY, tag_list, OPT_MERAKI_TAG_TYPE, excluded_alert_types_list)
